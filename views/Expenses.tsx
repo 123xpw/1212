@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, DollarSign, TrendingUp, Filter } from 'lucide-react';
+import { Plus, DollarSign, TrendingUp, StickyNote } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Expense, ExpenseCategory } from '../types';
 import { storageService } from '../services/storageService';
@@ -20,7 +21,7 @@ const categoryNames: Record<ExpenseCategory, string> = {
 export const ExpensesView: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newExpense, setNewExpense] = useState<Partial<Expense>>({
+  const [newExpense, setNewExpense] = useState<Partial<Omit<Expense, 'amount'> & { amount: string | number }>>({
     category: ExpenseCategory.Food,
     date: new Date().toISOString().split('T')[0]
   });
@@ -35,10 +36,11 @@ export const ExpensesView: React.FC = () => {
 
     const expense: Expense = {
       id: Date.now().toString(),
-      location: newExpense.location,
+      location: newExpense.location!,
       amount: Number(newExpense.amount),
       category: newExpense.category as ExpenseCategory,
-      date: newExpense.date || new Date().toISOString().split('T')[0]
+      date: newExpense.date || new Date().toISOString().split('T')[0],
+      note: newExpense.note
     };
 
     const updated = [expense, ...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -141,7 +143,7 @@ export const ExpensesView: React.FC = () => {
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="px-6 py-3 font-medium">日期</th>
-                  <th className="px-6 py-3 font-medium">地点</th>
+                  <th className="px-6 py-3 font-medium">地点/内容</th>
                   <th className="px-6 py-3 font-medium">类别</th>
                   <th className="px-6 py-3 font-medium text-right">金额</th>
                 </tr>
@@ -149,8 +151,15 @@ export const ExpensesView: React.FC = () => {
               <tbody className="divide-y divide-gray-100 text-sm">
                 {expenses.map((expense) => (
                   <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-600">{new Date(expense.date).toLocaleDateString('zh-CN')}</td>
-                    <td className="px-6 py-4 font-medium text-gray-800">{expense.location}</td>
+                    <td className="px-6 py-4 text-gray-600 w-32">{new Date(expense.date).toLocaleDateString('zh-CN')}</td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-800">{expense.location}</div>
+                      {expense.note && (
+                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <StickyNote size={10} /> {expense.note}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <span 
                         className="px-2 py-1 rounded-full text-xs font-medium text-white"
@@ -171,16 +180,17 @@ export const ExpensesView: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="新增消费">
         <form onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">目的地</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">目的地 / 商家</label>
             <input
               required
               type="text"
-              placeholder="例如：伦敦"
+              placeholder="例如：星巴克，或 伦敦希思罗机场"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
               value={newExpense.location || ''}
               onChange={e => setNewExpense({...newExpense, location: e.target.value})}
             />
           </div>
+          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">金额 (¥)</label>
@@ -205,6 +215,18 @@ export const ExpensesView: React.FC = () => {
               />
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">备注 (可选)</label>
+            <input
+              type="text"
+              placeholder="例如：给朋友带的礼物，打车去酒店"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
+              value={newExpense.note || ''}
+              onChange={e => setNewExpense({...newExpense, note: e.target.value})}
+            />
+          </div>
+
           <div>
              <label className="block text-sm font-medium text-gray-700 mb-1">类别</label>
              <div className="grid grid-cols-3 gap-2">
@@ -229,7 +251,7 @@ export const ExpensesView: React.FC = () => {
               type="submit"
               className="w-full bg-[#4682B4] text-white py-2 rounded-lg font-medium hover:bg-sky-700 transition-colors"
             >
-              添加交易
+              保存消费记录
             </button>
           </div>
         </form>

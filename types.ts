@@ -1,9 +1,9 @@
+
 export interface Journey {
   id: string;
   location: string;
   date: string;
   description: string;
-  imageUrl?: string;
 }
 
 export enum ExpenseCategory {
@@ -21,6 +21,7 @@ export interface Expense {
   amount: number;
   category: ExpenseCategory;
   date: string;
+  note?: string; // New: 消费备注
 }
 
 export interface WishlistItem {
@@ -28,16 +29,20 @@ export interface WishlistItem {
   location: string;
   plannedDate: string;
   reason: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: number; // 0, 25, 50, 75, 100
+  budgetNote?: string;
 }
 
 export interface Destination {
   id: string;
   name: string;
+  country: string;
   description: string;
   bestSeason: string;
   budgetLevel: 'Low' | 'Medium' | 'High' | 'Luxury';
   imageUrl: string;
+  tags: string[]; // 'Featured', 'Seasonal', 'Value'
+  recommendedReason: string;
 }
 
 export type ViewName = 'journeys' | 'expenses' | 'wishlist' | 'explore';

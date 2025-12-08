@@ -1,8 +1,8 @@
-# Voyage Backend Expansion Guide
+# Curio Travel 后端扩展指南
 
-Currently, this application runs entirely in the browser using `localStorage`. Here is how you can upgrade it to a full-stack application using Node.js or Django.
+目前，本应用程序完全在浏览器中使用 `localStorage` 运行。以下是将升级为使用 Node.js 或 Django 的全栈应用程序的指南。
 
-## 1. Data Modeling
+## 1. 数据建模 (Data Modeling)
 
 **Node.js (Mongoose/MongoDB):**
 ```javascript
@@ -25,27 +25,27 @@ class Journey(models.Model):
     image = models.ImageField(upload_to='journeys/')
 ```
 
-## 2. API Endpoints
+## 2. API 端点 (API Endpoints)
 
-Create standard REST API endpoints.
+创建标准的 REST API 端点。
 
-*   `GET /api/v1/journeys` - List all journeys
-*   `POST /api/v1/journeys` - Create journey
-*   `DELETE /api/v1/journeys/:id` - Delete journey
-*   `GET /api/v1/expenses` - Get expenses (support query params for filtering)
-*   `GET /api/v1/expenses/stats` - Get aggregated stats for the chart (offload calculation to DB)
+*   `GET /api/v1/journeys` - 获取所有旅程
+*   `POST /api/v1/journeys` - 创建新旅程
+*   `DELETE /api/v1/journeys/:id` - 删除旅程
+*   `GET /api/v1/expenses` - 获取消费记录 (支持筛选)
+*   `GET /api/v1/expenses/stats` - 获取图表统计数据 (建议在后端计算)
 
-## 3. Frontend Integration
+## 3. 前端集成 (Frontend Integration)
 
-1.  **Remove** `services/storageService.ts`.
-2.  **Create** `services/api.ts` using `axios` or `fetch`.
-3.  **Update Views:** Instead of `useEffect(() => setJourneys(storageService.getJourneys()), [])`, use an async call:
+1.  **移除** `services/storageService.ts`。
+2.  **创建** `services/api.ts` 使用 `axios` 或 `fetch`。
+3.  **更新视图 (Views):** 不再直接读取 storage，而是使用异步调用：
     ```typescript
     useEffect(() => {
       api.get('/journeys').then(res => setJourneys(res.data));
     }, []);
     ```
 
-## 4. Authentication
+## 4. 用户认证 (Authentication)
 
-You will need to add a User model and authentication mechanism (JWT is recommended) so that users can log in and see their private data across devices.
+你需要添加用户模型和认证机制（推荐 JWT），以便用户可以在不同设备上登录并查看自己的私有数据。

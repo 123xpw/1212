@@ -1,5 +1,10 @@
 {
-  "name": "Copy of Curio Travel - 旅行管理",
-  "description": "一个现代、极简的旅行管理平台，用于记录旅程、开销和愿望目的地。",
-  "requestFramePermissions": []
+  "short_name": "Curio",
+  "name": "Curio Travel - 旅行管理",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#4682B4",
+  "background_color": "#ffffff",
+  "requestFramePermissions": [],
+  "description": ""
 }
