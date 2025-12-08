@@ -1,9 +1,9 @@
 import { Journey, Expense, WishlistItem } from '../types';
 
 const KEYS = {
-  JOURNEYS: 'voyage_journeys',
-  EXPENSES: 'voyage_expenses',
-  WISHLIST: 'voyage_wishlist'
+  JOURNEYS: 'curio_journeys',
+  EXPENSES: 'curio_expenses',
+  WISHLIST: 'curio_wishlist'
 };
 
 const get = <T>(key: string, defaultValue: T): T => {

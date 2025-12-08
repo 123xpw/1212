@@ -27,31 +27,24 @@ function App() {
         {renderView()}
       </main>
 
-      {/* Backend Expansion Guide Component (Hidden in UI, present in code) */}
-      <div className="hidden">
-        {/* 
-          BACKEND EXPANSION GUIDE:
-          
-          To migrate this frontend-only app to a full stack application (Django/Node):
-          
-          1. API Layer:
-             - Create RESTful endpoints or GraphQL resolvers for Journeys, Expenses, and Wishlist.
-             - Example endpoints: GET /api/journeys, POST /api/journeys, DELETE /api/journeys/:id
-          
-          2. Database:
-             - Replace 'types.ts' interfaces with Database Models (e.g., Mongoose Schema or Django Models).
-             - Store images in S3 or Cloudinary instead of using picsum placeholder URLs.
-          
-          3. Authentication:
-             - Implement JWT auth. 
-             - Add a Login/Signup view in App.tsx.
-             - Secure endpoints so users only see their own data.
-          
-          4. Frontend Changes:
-             - Replace 'services/storageService.ts' with 'services/apiService.ts' using fetch or axios.
-             - Use React Query or SWR for better server-state management.
-        */}
-      </div>
+      {/* 
+        BACKEND EXPANSION GUIDE (HIDDEN):
+        
+        To migrate Curio Travel to a full stack application:
+        
+        1. API Layer:
+           - Create RESTful endpoints or GraphQL resolvers.
+        
+        2. Database:
+           - Replace 'types.ts' with DB Models.
+           - Use Cloudinary/S3 for images.
+        
+        3. Authentication:
+           - Implement JWT auth.
+        
+        4. Frontend:
+           - Replace storageService with apiService.
+      */}
     </div>
   );
 }
