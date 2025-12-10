@@ -5,146 +5,110 @@
 
 ## 1. 数据库模式设计 (Database Schema)
 
-推荐使用 MySQL (8.0+) 或 PostgreSQL。
 
-### `users` (用户表)
-用于管理账户和鉴权。
-```sql
+## 1. 核心业务表
+1. Users
 CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    avatar_url VARCHAR(255),
+    user_id INT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
+    PRIMARY KEY (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-### `destinations` (公共目的地库)
-**对应前端：探索发现 (Explore)**
-这是一个**系统级公共表**，存储全球热门旅行地的信息。
-*作用*：为用户提供标准化的地点数据，支持按季节、预算和标签筛选。
+2. Travel Footprints
+CREATE TABLE travel_footprints (
+    travel_footprint_id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
 
-```sql
+    location VARCHAR(200) NOT NULL,
+    date DATE NOT NULL,
+    description TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (travel_footprint_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+3. Wishlist
+CREATE TABLE wishlist (
+    wishlist_id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+
+    location VARCHAR(200) NOT NULL,
+    reason TEXT,
+    planned_date VARCHAR(100),
+    priority TINYINT DEFAULT 50,
+    budget VARCHAR(200),
+    status ENUM('Pending', 'Realized') DEFAULT 'Pending',
+
+    destination_id BIGINT,         -- optional foreign key
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (wishlist_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    -- destination_id intentionally not constrained to allow flexible linking
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+4. Expenses
+CREATE TABLE expenses (
+    expense_id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+
+    location VARCHAR(200) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    date DATE NOT NULL,
+    category ENUM('交通','住宿','餐饮','购物','活动','其他') NOT NULL DEFAULT '其他',
+    note TEXT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (expense_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+5. Destinations
 CREATE TABLE destinations (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,           -- 地点名称 (如: 京都)
-    country VARCHAR(100) NOT NULL,        -- 所属国家/地区 (如: 日本) [新增]
-    description TEXT,                     -- 详细简介
-    recommended_reason TEXT,              -- 推荐理由 (如: 体验极致的东方美学...) [新增]
-    
-    best_season VARCHAR(100),             -- 最佳季节描述 (如: 春季或秋季)
-    budget_level ENUM('Low', 'Medium', 'High', 'Luxury'), -- 预算等级
-    
-    image_url VARCHAR(500),               -- 封面图链接
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+    destination_id BIGINT NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    description TEXT,
+    recommended_reason TEXT,
+    best_season VARCHAR(100),
+    budget_level ENUM('Low','Medium','High','Luxury'),
+    image_url VARCHAR(500),
 
-### `destination_tags` (目的地分类标签)
-**核心表：支撑“精选”、“季节”、“性价比”三大分类**
-使用多对多关联设计，一个地点可以同时属于“精选”和“季节推荐”。
-```sql
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (destination_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+6. Destination Tags
 CREATE TABLE destination_tags (
     destination_id BIGINT NOT NULL,
-    tag_name VARCHAR(50) NOT NULL, -- 枚举值: 'Featured', 'Seasonal', 'Value'
+    tag_name VARCHAR(50) NOT NULL,
+
     PRIMARY KEY (destination_id, tag_name),
-    FOREIGN KEY (destination_id) REFERENCES destinations(id) ON DELETE CASCADE
-);
-```
-*查询示例：查询所有“高性价比”的目的地*
-`SELECT * FROM destinations d JOIN destination_tags t ON d.id = t.destination_id WHERE t.tag_name = 'Value';`
+    FOREIGN KEY (destination_id) REFERENCES destinations(destination_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-### `destination_reviews` (目的地评价 - 扩展)
-**为“探索发现”模块增加社区价值**
-允许用户对公共目的地进行评分，帮助其他用户决策。
-```sql
-CREATE TABLE destination_reviews (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    destination_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
-    rating TINYINT NOT NULL, -- 1-5分
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (destination_id) REFERENCES destinations(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-```
-
-### `diaries` (旅行日记 / 我的旅程)
-对应前端：**我的旅程 (Journeys)**
-```sql
-CREATE TABLE diaries (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    location VARCHAR(100) NOT NULL, -- 地点
-    travel_date DATE NOT NULL,      -- 日期
-    description TEXT,               -- 旅程描述
-    -- image_url VARCHAR(255),      -- (前端已移除图片功能，数据库可保留以备未来使用)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-```
-
-### `expenses` (消费记录)
-对应前端：**消费记录 (Expenses)**
-```sql
-CREATE TABLE expenses (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    diary_id BIGINT,                -- 可选：关联到具体的某次旅程
-    location VARCHAR(100) NOT NULL, -- 消费地点/商家
-    amount DECIMAL(10, 2) NOT NULL, -- 金额
-    category ENUM('Transport', 'Accommodation', 'Food', 'Shopping', 'Activities', 'Other') NOT NULL,
-    expense_date DATE NOT NULL,
-    note VARCHAR(255),              -- 备注 (如: 给同事买礼物) [新增]
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (diary_id) REFERENCES diaries(id) ON DELETE SET NULL
-);
-```
-
-### `wishlist` (愿望清单)
-对应前端：**愿望目的地 (Wishlist)**
-```sql
-CREATE TABLE wishlist (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    
-    -- 核心字段
-    location VARCHAR(100) NOT NULL,
-    destination_id BIGINT,          -- 关联公共库 (可选)，如果是从【探索发现】加入的，则记录此ID
-    
-    planned_date VARCHAR(50),       -- 计划日期
-    reason TEXT,                    -- 理由
-    priority TINYINT DEFAULT 50,    -- 优先级：0, 25, 50, 75, 100
-    -- budget_note VARCHAR(255),    -- (前端已移除此字段，移至消费记录)
-    
-    status ENUM('Pending', 'Realized') DEFAULT 'Pending', -- 状态：未实现/已实现
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (destination_id) REFERENCES destinations(id) ON DELETE SET NULL
-);
-```
-
-### `audit_log` (审计日志)
-用于安全审计和操作记录。
-```sql
+7. Audit Log
 CREATE TABLE audit_log (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT,
-    action VARCHAR(50) NOT NULL,      -- 例如: "DELETE_DIARY", "LOGIN"
-    target_table VARCHAR(50),         -- 例如: "diaries"
-    target_id BIGINT,                 -- 受影响的记录ID
+    audit_id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id INT,
+    action VARCHAR(50) NOT NULL,
+    target_table VARCHAR(50) NOT NULL,
+    target_id INT,
+    old_value JSON,
+    new_value JSON,
     ip_address VARCHAR(45),
     user_agent VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
----
+    PRIMARY KEY (audit_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 ## 2. API 接口规范 (RESTful)
 

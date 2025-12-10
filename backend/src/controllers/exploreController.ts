@@ -2,8 +2,21 @@ import { Request as ExpressRequest, Response as ExpressResponse } from 'express'
 import { pool } from '../config/db';
 import { RowDataPacket } from 'mysql2';
 
+// 辅助函数：将 DB 行转换为前端 CamelCase 格式
+const mapDestinationToFrontend = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  country: row.country,
+  description: row.description,
+  recommendedReason: row.recommended_reason, // Map snake_case
+  bestSeason: row.best_season,               // Map snake_case
+  budgetLevel: row.budget_level,             // Map snake_case
+  imageUrl: row.image_url,                   // Map snake_case
+  tags: row.tags ? (typeof row.tags === 'string' ? row.tags.split(',') : row.tags) : []
+});
+
 // 获取公共目的地列表 (支持分类筛选)
-export const getDestinations = async (req: ExpressRequest, res: ExpressResponse) => {
+export const getDestinations = async (req: any, res: any) => {
   try {
     const category = req.query.category as string; // 'Featured', 'Seasonal', 'Value'
 
@@ -16,7 +29,6 @@ export const getDestinations = async (req: ExpressRequest, res: ExpressResponse)
     
     const params: any[] = [];
 
-    // 如果有分类参数，先通过子查询或Join过滤
     if (category) {
       query += ` WHERE d.id IN (SELECT destination_id FROM destination_tags WHERE tag_name = ?)`;
       params.push(category);
@@ -26,11 +38,7 @@ export const getDestinations = async (req: ExpressRequest, res: ExpressResponse)
 
     const [rows] = await pool.query<RowDataPacket[]>(query, params);
 
-    // 处理 tags 字符串转数组 (GROUP_CONCAT 返回 "Featured,Seasonal")
-    const formattedRows = rows.map(row => ({
-      ...row,
-      tags: row.tags ? (row.tags as string).split(',') : []
-    }));
+    const formattedRows = rows.map(mapDestinationToFrontend);
 
     res.json(formattedRows);
   } catch (error) {
@@ -39,7 +47,7 @@ export const getDestinations = async (req: ExpressRequest, res: ExpressResponse)
 };
 
 // 获取目的地详情
-export const getDestinationById = async (req: ExpressRequest, res: ExpressResponse) => {
+export const getDestinationById = async (req: any, res: any) => {
   try {
     const id = req.params.id;
     const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM destinations WHERE id = ?', [id]);
@@ -53,7 +61,8 @@ export const getDestinationById = async (req: ExpressRequest, res: ExpressRespon
     const [tagRows] = await pool.query<RowDataPacket[]>('SELECT tag_name FROM destination_tags WHERE destination_id = ?', [id]);
     const tags = tagRows.map(row => row.tag_name);
 
-    res.json({ ...rows[0], tags });
+    const destination = { ...rows[0], tags };
+    res.json(mapDestinationToFrontend(destination));
   } catch (error) {
     res.status(500).json({ message: 'Error fetching destination details', error });
   }

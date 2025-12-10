@@ -1,45 +1,64 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Trash2, MapPin, Circle } from 'lucide-react';
+import { Plus, Trash2, MapPin, Circle, Loader2 } from 'lucide-react';
 import { Journey } from '../types';
-import { storageService } from '../services/storageService';
+import { apiService } from '../services/apiService';
 import { Modal } from '../components/Modal';
 import { EmptyState } from '../components/EmptyState';
 
 export const JourneysView: React.FC = () => {
   const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newJourney, setNewJourney] = useState<Partial<Journey>>({});
 
+  const fetchData = async () => {
+    try {
+      const data = await apiService.getJourneys();
+      setJourneys(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setJourneys(storageService.getJourneys());
+    fetchData();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newJourney.location || !newJourney.date) return;
 
-    const journey: Journey = {
-      id: Date.now().toString(),
-      location: newJourney.location,
-      date: newJourney.date,
-      description: newJourney.description || '',
-    };
-
-    const updated = [journey, ...journeys].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setJourneys(updated);
-    storageService.saveJourneys(updated);
-    setIsModalOpen(false);
-    setNewJourney({});
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm('确定要删除这段美好的回忆吗？')) {
-      const updated = journeys.filter(j => j.id !== id);
-      setJourneys(updated);
-      storageService.saveJourneys(updated);
+    try {
+      const savedJourney = await apiService.createJourney({
+        location: newJourney.location,
+        date: newJourney.date,
+        description: newJourney.description || '',
+      });
+      // 重新获取或直接更新状态
+      setJourneys([savedJourney, ...journeys].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setIsModalOpen(false);
+      setNewJourney({});
+    } catch (e) {
+      alert("保存失败，请重试");
     }
   };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('确定要删除这段美好的回忆吗？')) {
+      try {
+        await apiService.deleteJourney(id);
+        setJourneys(journeys.filter(j => j.id !== id));
+      } catch (e) {
+        alert("删除失败");
+      }
+    }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#4682B4]" /></div>;
+  }
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -136,8 +155,9 @@ export const JourneysView: React.FC = () => {
             <button
               type="submit"
               className="w-full bg-[#4682B4] text-white py-3 rounded-lg font-medium hover:bg-sky-700 transition-colors shadow-sm"
+              disabled={isLoading}
             >
-              保存记录
+              {isLoading ? '保存中...' : '保存记录'}
             </button>
           </div>
         </form>

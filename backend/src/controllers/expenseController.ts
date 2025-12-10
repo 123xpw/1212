@@ -8,7 +8,7 @@ interface AuthRequest extends ExpressRequest {
 }
 
 // 获取消费列表
-export const getExpenses = async (req: ExpressRequest, res: ExpressResponse) => {
+export const getExpenses = async (req: any, res: any) => {
   try {
     const userId = (req as AuthRequest).user?.id;
     if (!userId) {
@@ -23,25 +23,25 @@ export const getExpenses = async (req: ExpressRequest, res: ExpressResponse) => 
 };
 
 // 新增消费
-export const createExpense = async (req: ExpressRequest, res: ExpressResponse) => {
+export const createExpense = async (req: any, res: any) => {
   try {
     const userId = (req as AuthRequest).user?.id;
     if (!userId) {
       res.status(401).json({ message: 'User ID missing' });
       return;
     }
-    const { item, amount, date, category, note } = req.body;
+    // 修正：使用 location 和 note
+    const { location, amount, date, category, note } = req.body;
 
-    // 1. 执行插入
     const [result] = await pool.execute<ResultSetHeader>(
-      'INSERT INTO expenses (user_id, item, amount, date, category, notes) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, item, amount, date, category, note]
+      'INSERT INTO expenses (user_id, location, amount, date, category, note) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, location, amount, date, category, note]
     );
 
     const newExpenseId = result.insertId;
-    const newExpenseData = { id: newExpenseId, userId, item, amount, date, category, note };
+    const newExpenseData = { id: newExpenseId, userId, location, amount, date, category, note };
 
-    // 2. 记录审计日志
+    // 记录审计日志
     await logAudit({
       userId,
       action: 'INSERT',
@@ -54,12 +54,13 @@ export const createExpense = async (req: ExpressRequest, res: ExpressResponse) =
 
     res.status(201).json(newExpenseData);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Error creating expense', error });
   }
 };
 
 // 更新消费
-export const updateExpense = async (req: ExpressRequest, res: ExpressResponse) => {
+export const updateExpense = async (req: any, res: any) => {
   try {
     const userId = (req as AuthRequest).user?.id;
     if (!userId) {
@@ -67,7 +68,7 @@ export const updateExpense = async (req: ExpressRequest, res: ExpressResponse) =
       return;
     }
     const expenseId = Number(req.params.id);
-    const { item, amount, date, category, note } = req.body;
+    const { location, amount, date, category, note } = req.body;
 
     // 1. 获取旧值 (用于审计)
     const [oldRows] = await pool.query<RowDataPacket[]>('SELECT * FROM expenses WHERE id = ? AND user_id = ?', [expenseId, userId]);
@@ -79,11 +80,11 @@ export const updateExpense = async (req: ExpressRequest, res: ExpressResponse) =
 
     // 2. 执行更新
     await pool.execute(
-      'UPDATE expenses SET item = ?, amount = ?, date = ?, category = ?, notes = ? WHERE id = ?',
-      [item, amount, date, category, note, expenseId]
+      'UPDATE expenses SET location = ?, amount = ?, date = ?, category = ?, note = ? WHERE id = ?',
+      [location, amount, date, category, note, expenseId]
     );
 
-    const newValue = { ...oldValue, item, amount, date, category, notes: note };
+    const newValue = { ...oldValue, location, amount, date, category, note };
 
     // 3. 记录审计日志
     await logAudit({
@@ -104,7 +105,7 @@ export const updateExpense = async (req: ExpressRequest, res: ExpressResponse) =
 };
 
 // 删除消费
-export const deleteExpense = async (req: ExpressRequest, res: ExpressResponse) => {
+export const deleteExpense = async (req: any, res: any) => {
   try {
     const userId = (req as AuthRequest).user?.id;
     if (!userId) {

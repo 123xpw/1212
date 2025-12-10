@@ -31,6 +31,7 @@ export interface WishlistItem {
   reason: string;
   priority: number; // 0, 25, 50, 75, 100
   budgetNote?: string;
+  status: 'Pending' | 'Realized'; // New: 愿望状态
 }
 
 export interface Destination {
